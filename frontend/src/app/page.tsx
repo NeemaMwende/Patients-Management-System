@@ -1,11 +1,38 @@
+"use client"
+
+import { useState } from 'react';
+import { Layout } from '@/components/layout';
+import { Dashboard } from '@/components/dashboard';
+import { PatientForm } from '@/components/patient-form';
+import { PatientList } from '@/components/patient-list';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'register':
+        return (
+          <div className="space-y-4">
+            <PatientForm onSuccess={() => setActiveTab('patients')} />
+          </div>
+        );
+      case 'patients':
+        return <PatientList />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-       Hey
-      </main>
-      
-    </div>
+    <>
+      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+        {renderContent()}
+      </Layout>
+      <Toaster />
+    </>
   );
 }

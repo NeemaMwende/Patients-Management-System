@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { patientApi, Patient } from '@/lib/api';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { PatientForm } from './patient-form';
 
 interface PatientListProps {
@@ -27,7 +27,7 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
-  const { toast } = useToast();
+//   const { toast } = useToast();
 
   const fetchPatients = async (search?: string) => {
     try {
@@ -35,11 +35,8 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
       const response = await patientApi.getPatients(search);
       setPatients(response.data);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch patients',
-        variant: 'destructive',
-      });
+        toast.error('Failed to fetch patients');
+
     } finally {
       setLoading(false);
     }
@@ -61,17 +58,10 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
   const handleDeletePatient = async (patientId: string) => {
     try {
       await patientApi.deletePatient(patientId);
-      toast({
-        title: 'Success',
-        description: 'Patient deleted successfully',
-      });
+      toast.success('Patient deleted successfully');
       fetchPatients(searchTerm);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete patient',
-        variant: 'destructive',
-      });
+        toast.error('Failed to delete patient');
     }
   };
 
