@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInYears, parseISO } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { patientFormSchema, PatientFormValues } from '@/lib/validations';
 import { patientApi, Patient } from '@/lib/api';
-// import { useToast } from '@/components/ui/use-toast';
 import { toast } from 'sonner';
 
 interface PatientFormProps {
@@ -28,25 +27,98 @@ interface PatientFormProps {
 
 export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-//   const { toast } = useToast();
+  const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
     defaultValues: {
-      first_name: patient?.first_name || '',
-      last_name: patient?.last_name || '',
-      date_of_birth: patient?.date_of_birth || '',
-      gender: patient?.gender || undefined,
-      phone_number: patient?.phone_number || '',
-      email: patient?.email || '',
-      address: patient?.address || '',
-      emergency_contact_name: patient?.emergency_contact_name || '',
-      emergency_contact_phone: patient?.emergency_contact_phone || '',
-      blood_type: patient?.blood_type || '',
-      allergies: patient?.allergies || '',
-      medical_history: patient?.medical_history || '',
+      first_name: '',
+      last_name: '',
+      date_of_birth: '',
+      gender: undefined,
+      phone_number: '',
+      email: '',
+      address: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      blood_type: '',
+      allergies: '',
+      medical_history: '',
     },
   });
+
+  // Function to calculate age from date of birth
+  const calculateAge = (dateOfBirth: string) => {
+    if (!dateOfBirth) return null;
+    try {
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      return differenceInYears(today, birthDate);
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // Reset form with patient data when patient prop changes
+  useEffect(() => {
+    if (patient) {
+      // Format date for form input
+      const formattedDate = patient.date_of_birth 
+        ? (typeof patient.date_of_birth === 'string' 
+            ? patient.date_of_birth.split('T')[0] 
+            : patient.date_of_birth.toISOString().split('T')[0])
+        : '';
+
+      form.reset({
+        first_name: patient.first_name || '',
+        last_name: patient.last_name || '',
+        date_of_birth: formattedDate,
+        gender: patient.gender || undefined,
+        phone_number: patient.phone_number || '',
+        email: patient.email || '',
+        address: patient.address || '',
+        emergency_contact_name: patient.emergency_contact_name || '',
+        emergency_contact_phone: patient.emergency_contact_phone || '',
+        blood_type: patient.blood_type || '',
+        allergies: patient.allergies || '',
+        medical_history: patient.medical_history || '',
+      });
+
+      // Calculate age from existing date
+      if (formattedDate) {
+        const age = calculateAge(formattedDate);
+        setCalculatedAge(age);
+      }
+    } else {
+      // Reset form for new patient
+      form.reset({
+        first_name: '',
+        last_name: '',
+        date_of_birth: '',
+        gender: undefined,
+        phone_number: '',
+        email: '',
+        address: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        blood_type: '',
+        allergies: '',
+        medical_history: '',
+      });
+      setCalculatedAge(null);
+    }
+  }, [patient, form]);
+
+  // Watch for changes in date of birth to calculate age
+  const dateOfBirth = form.watch('date_of_birth');
+  useEffect(() => {
+    if (dateOfBirth) {
+      const age = calculateAge(dateOfBirth);
+      setCalculatedAge(age);
+    } else {
+      setCalculatedAge(null);
+    }
+  }, [dateOfBirth]);
 
   const onSubmit = async (data: PatientFormValues) => {
     setIsLoading(true);
@@ -66,10 +138,10 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
       
       if (!patient) {
         form.reset();
+        setCalculatedAge(null);
       }
     } catch (error: any) {
         toast.error(error.response?.data?.message || 'Something went wrong');
-
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +188,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <FormField
                 control={form.control}
                 name="date_of_birth"
@@ -158,13 +230,27 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                   </FormItem>
                 )}
               />
+              
+              {/* Age Display Field */}
+              <FormItem>
+                <FormLabel>Age</FormLabel>
+                <FormControl>
+                  <Input 
+                    value={calculatedAge !== null ? `${calculatedAge} years` : ''} 
+                    disabled 
+                    placeholder="Auto-calculated"
+                    className="bg-gray-50"
+                  />
+                </FormControl>
+              </FormItem>
+              
               <FormField
                 control={form.control}
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -186,7 +272,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Blood Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select blood type" />
