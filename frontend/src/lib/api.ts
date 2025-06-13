@@ -13,7 +13,7 @@ export interface Patient {
     patient_id: string;
   first_name: string;
   last_name: string;
-  date_of_birth: string;
+  date_of_birth: string | Date | null;
   gender: 'M' | 'F' | 'O';
   phone_number: string;
   email?: string;
