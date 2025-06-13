@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
+import { format, isValid, parseISO } from 'date-fns';
 import { Search, Eye, Edit, Trash2, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,38 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { patientApi, Patient } from '@/lib/api';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { PatientForm } from './patient-form';
 
 interface PatientListProps {
   onPatientSelect?: (patient: Patient) => void;
   showActions?: boolean;
 }
+
+// Helper function to safely format dates
+const safeFormatDate = (dateValue: string | Date | null | undefined, formatStr: string = 'MMM dd, yyyy'): string => {
+  if (!dateValue) return 'N/A';
+  
+  try {
+    let date: Date;
+    
+    if (typeof dateValue === 'string') {
+      // Try parsing ISO string first, then regular Date constructor
+      date = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue);
+    } else {
+      date = dateValue;
+    }
+    
+    if (!isValid(date)) {
+      return 'Invalid Date';
+    }
+    
+    return format(date, formatStr);
+  } catch (error) {
+    console.warn('Date formatting error:', error, 'for value:', dateValue);
+    return 'Invalid Date';
+  }
+};
 
 export function PatientList({ onPatientSelect, showActions = true }: PatientListProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -27,7 +52,9 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
-  const { toast } = useToast();
+  
+  // Use useRef to store the debounce timer
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPatients = async (search?: string) => {
     try {
@@ -35,11 +62,7 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
       const response = await patientApi.getPatients(search);
       setPatients(response.data);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch patients',
-        variant: 'destructive',
-      });
+        toast.error('Failed to fetch patients');
     } finally {
       setLoading(false);
     }
@@ -51,27 +74,34 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    const debounceTimer = setTimeout(() => {
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new timer
+    debounceTimerRef.current = setTimeout(() => {
       fetchPatients(value);
     }, 300);
-
-    return () => clearTimeout(debounceTimer);
   };
+
+  // Cleanup timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleDeletePatient = async (patientId: string) => {
     try {
       await patientApi.deletePatient(patientId);
-      toast({
-        title: 'Success',
-        description: 'Patient deleted successfully',
-      });
+      toast.success('Patient deleted successfully');
       fetchPatients(searchTerm);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete patient',
-        variant: 'destructive',
-      });
+        toast.error('Failed to delete patient');
     }
   };
 
@@ -79,6 +109,16 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
     setShowEditDialog(false);
     setSelectedPatient(null);
     fetchPatients(searchTerm);
+  };
+
+  const handleViewPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowViewDialog(true);
+  };
+
+  const handleEditPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowEditDialog(true);
   };
 
   const getGenderBadge = (gender: string) => {
@@ -90,8 +130,8 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
     const labels = { M: 'Male', F: 'Female', O: 'Other' };
     
     return (
-      <Badge className={colors[gender as keyof typeof colors]}>
-        {labels[gender as keyof typeof labels]}
+      <Badge className={colors[gender as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+        {labels[gender as keyof typeof labels] || 'Unknown'}
       </Badge>
     );
   };
@@ -175,61 +215,32 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
                     <TableCell>{patient.phone_number}</TableCell>
                     <TableCell>{patient.email || 'N/A'}</TableCell>
                     <TableCell>
-                      {format(new Date(patient.created_at), 'MMM dd, yyyy')}
+                      {safeFormatDate(patient.created_at)}
                     </TableCell>
                     {showActions && (
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-2">
-                          <Dialog open={showViewDialog && selectedPatient?.patient_id === patient.patient_id} onOpenChange={setShowViewDialog}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedPatient(patient);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>Patient Details</DialogTitle>
-                                <DialogDescription>
-                                  Complete information for {patient.first_name} {patient.last_name}
-                                </DialogDescription>
-                              </DialogHeader>
-                              {selectedPatient && <PatientDetailsView patient={selectedPatient} />}
-                            </DialogContent>
-                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewPatient(patient);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
 
-                          <Dialog open={showEditDialog && selectedPatient?.patient_id === patient.patient_id} onOpenChange={setShowEditDialog}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedPatient(patient);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                              {selectedPatient && (
-                                <PatientForm
-                                  patient={selectedPatient}
-                                  onSuccess={handleEditSuccess}
-                                  onCancel={() => {
-                                    setShowEditDialog(false);
-                                    setSelectedPatient(null);
-                                  }}
-                                />
-                              )}
-                            </DialogContent>
-                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPatient(patient);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -265,6 +276,35 @@ export function PatientList({ onPatientSelect, showActions = true }: PatientList
             </Table>
           </div>
         )}
+
+        {/* View Patient Dialog */}
+        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Patient Details</DialogTitle>
+              <DialogDescription>
+                Complete information for {selectedPatient?.first_name} {selectedPatient?.last_name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedPatient && <PatientDetailsView patient={selectedPatient} />}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Patient Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {selectedPatient && (
+              <PatientForm
+                patient={selectedPatient}
+                onSuccess={handleEditSuccess}
+                onCancel={() => {
+                  setShowEditDialog(false);
+                  setSelectedPatient(null);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
@@ -284,7 +324,7 @@ function PatientDetailsView({ patient }: { patient: Patient }) {
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-          <p className="text-sm">{format(new Date(patient.date_of_birth), 'MMMM dd, yyyy')}</p>
+          <p className="text-sm">{safeFormatDate(patient.date_of_birth, 'MMMM dd, yyyy')}</p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Age</label>
@@ -341,11 +381,11 @@ function PatientDetailsView({ patient }: { patient: Patient }) {
       <div className="grid grid-cols-2 gap-4 pt-4 border-t">
         <div>
           <label className="text-sm font-medium text-gray-500">Registered</label>
-          <p className="text-sm">{format(new Date(patient.created_at), 'MMMM dd, yyyy HH:mm')}</p>
+          <p className="text-sm">{safeFormatDate(patient.created_at, 'MMMM dd, yyyy HH:mm')}</p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-500">Last Updated</label>
-          <p className="text-sm">{format(new Date(patient.updated_at), 'MMMM dd, yyyy HH:mm')}</p>
+          <p className="text-sm">{safeFormatDate(patient.updated_at, 'MMMM dd, yyyy HH:mm')}</p>
         </div>
       </div>
     </div>
