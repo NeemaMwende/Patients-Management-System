@@ -20,7 +20,7 @@ cd patient-management-system
 ```bash
 docker-compose up
 ```
-###⌛ Wait a few minutes for Docker to download images and start everything.
+### ⌛ Wait a few minutes for Docker to download images and start everything.
 
 ### 🌐 Step 3: Open Your Browser
 
@@ -38,10 +38,10 @@ docker-compose exec backend python manage.py createsuperuser
 🎉 That's It!
 Your Patient Management System is now up and running. You can:
 
-🧍 Add patients
-📅 Schedule appointments
-📁 View medical records
-👥 Manage users
+- 🧍 Add patients
+- 📅 Schedule appointments
+- 📁 View medical records
+- 👥 Manage users
 
 ## Common Commands
 
