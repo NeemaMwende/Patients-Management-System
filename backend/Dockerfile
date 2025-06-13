@@ -1,14 +1,18 @@
-FROM python:3.11-slim 
-
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY backend/ .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python3 manage.py collectstatic --no-input
-RUN python3 manage.py migrate
+# Copy source code
+COPY . .
 
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+EXPOSE 8000
+
+CMD ["gunicorn", "patient_records.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
