@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
-        },
+    },
 });
+
 
 export interface Patient {
     patient_id: string;
@@ -46,25 +47,25 @@ export interface PatientFormData {
 export const patientApi = {
     // Get all patients
   getPatients: (search?: string) => 
-    api.get<Patient[]>('/patients/', { params: { search } }),
+    api.get<Patient[]>('/api/patients/', { params: { search } }),
   
   // Get single patient
   getPatient: (patientId: string) => 
-    api.get<Patient>(`/patients/${patientId}/`),
+    api.get<Patient>(`/api/patients/${patientId}/`),
   
   // Create patient
   createPatient: (data: PatientFormData) => 
-    api.post<Patient>('/patients/', data),
+    api.post<Patient>('/api/patients/', data),
   
   // Update patient
   updatePatient: (patientId: string, data: Partial<PatientFormData>) => 
-    api.put<Patient>(`/patients/${patientId}/`, data),
+    api.put<Patient>(`/api/patients/${patientId}/`, data),
   
   // Delete patient
   deletePatient: (patientId: string) => 
-    api.delete(`/patients/${patientId}/`),
+    api.delete(`/api/patients/${patientId}/`),
   
   // Get stats
   getStats: () => 
-    api.get<{total_patients: number; male_patients: number; female_patients: number}>('/stats/'),
+    api.get<{total_patients: number; male_patients: number; female_patients: number}>('/api/stats/'),
 };
