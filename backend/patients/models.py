@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
+from django.contrib.auth.models import AbstractUser
 
 class Patient(models.Model):
     GENDER_CHOICES = [
@@ -56,3 +57,17 @@ class Patient(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        
+class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('doctor', 'Doctor'),
+        ('nurse', 'Nurse'),
+        ('patient', 'Patient'),
+    ]   
+    
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='patient')
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+        
+    def __str__(self):
+        return f"{self.username} ({self.role})"
