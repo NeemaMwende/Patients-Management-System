@@ -5,6 +5,7 @@ import { DoctorLayout } from "../../components/layouts/DoctorLayout";
 import { DoctorDashboard } from "../../components/doctors/doctor-dashboard";
 import { DoctorList } from "../../components/doctors/doctor-list";
 import { DoctorForm } from "../../components/doctors/doctor-form";
+import { Schedules } from "@/components/doctors/doctor-schedule";
 
 export default function DoctorsPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -14,7 +15,7 @@ export default function DoctorsPage() {
       {activeTab === "dashboard" && <DoctorDashboard />}
       {activeTab === "list" && <DoctorList />}
       {activeTab === "form" && <DoctorForm />}
-      {activeTab === "schedules" && <div>Schedules Page</div>}
+      {activeTab === "schedules" && <Schedules />}
       {activeTab === "patients" && <div>Patients Page</div>}
     </DoctorLayout>
   );

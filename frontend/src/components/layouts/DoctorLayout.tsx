@@ -32,13 +32,13 @@ const navigation = [
   },
   {
     name: 'Register Doctor',
-    id: 'register',
+    id: 'form',
     icon: UserPlus,
     description: 'Add new doctor record'
   },
   {
     name: 'Doctor Records',
-    id: 'doctors',
+    id: 'list',
     icon: Users,
     description: 'View and manage doctors'
   },
