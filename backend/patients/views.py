@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework.views import APIView  # MISSING IMPORT
 from django.db.models import Q
 from .models import Patient
 from .serializers import PatientSerializer, PatientListSerializer
@@ -8,6 +9,7 @@ from .serializers import PatientSerializer, PatientListSerializer
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated
+
 class PatientListCreateView(generics.ListCreateAPIView):
     queryset = Patient.objects.all()
     
