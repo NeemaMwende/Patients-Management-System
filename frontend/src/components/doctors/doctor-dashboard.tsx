@@ -95,7 +95,7 @@ export function DoctorDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Doctor Dashboard</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
         <p className="text-muted-foreground">
           Overview of medical staff and department statistics
         </p>
