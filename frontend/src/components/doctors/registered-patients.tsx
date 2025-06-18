@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { patientApi, Patient } from "@/lib/api";
 import { differenceInYears } from "date-fns";
-import { User2, Phone, Mail, Activity } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { patientApi, Patient } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
-export default function RegisteredPatients() {
+export default function RegisteredPatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await patientApi.getAllPatients();
+        const response = await patientApi.getPatients();
         setPatients(response.data);
       } catch (error) {
-        console.error("Error fetching patients", error);
+        console.error("Error fetching patients:", error);
       } finally {
         setLoading(false);
       }
@@ -27,7 +30,8 @@ export default function RegisteredPatients() {
     fetchPatients();
   }, []);
 
-  const calculateAge = (dob: string | Date): number | null => {
+  const calculateAge = (dob: string | Date | null): number | null => {
+    if (!dob) return null;
     try {
       return differenceInYears(new Date(), new Date(dob));
     } catch {
@@ -35,62 +39,74 @@ export default function RegisteredPatients() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-        {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-36 w-full rounded-lg" />
-        ))}
-      </div>
-    );
-  }
+  const filteredPatients = patients.filter((patient) => {
+    const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" || (patient.status ?? "active").toLowerCase() === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Registered Patients ({patients.length})</h1>
-      {patients.length === 0 ? (
-        <p className="text-gray-600">No patients registered yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patients.map((patient) => (
-            <Card key={patient.patient_id} className="p-4 space-y-2 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <User2 className="text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">
-                  {patient.first_name} {patient.last_name}
-                </h2>
-              </div>
-              <p className="text-sm text-gray-600">
-                Age: {calculateAge(patient.date_of_birth)} | Gender: {patient.gender}
-              </p>
-              <p className="text-sm flex items-center text-gray-600 gap-2">
-                <Phone className="w-4 h-4" /> {patient.phone_number}
-              </p>
-              {patient.email && (
-                <p className="text-sm flex items-center text-gray-600 gap-2">
-                  <Mail className="w-4 h-4" /> {patient.email}
-                </p>
-              )}
-              <div className="flex justify-between items-center pt-2">
-                <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                  Blood: {patient.blood_type || "N/A"}
-                </Badge>
-                <Badge
-                  className={
-                    patient.status === "finished"
-                      ? "bg-green-100 text-green-700"
-                      : patient.status === "active"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-red-100 text-red-700"
-                  }
-                >
-                  {patient.status?.charAt(0).toUpperCase() + patient.status?.slice(1) || "Unknown"}
-                </Badge>
-              </div>
-            </Card>
-          ))}
+    <Card className="max-w-6xl mx-auto mt-6 shadow-md">
+      <CardHeader>
+        <CardTitle className="text-2xl font-semibold">Registered Patients</CardTitle>
+        <div className="mt-4 flex flex-col md:flex-row gap-4">
+          <Input
+            placeholder="Search by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:w-1/2"
+          />
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val)}>
+            <SelectTrigger className="w-full md:w-1/3">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="ongoing">Ongoing</SelectItem>
+              <SelectItem value="finished">Finished</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : filteredPatients.length === 0 ? (
+          <p className="text-center text-muted-foreground py-6">No patients match your search.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>#</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Gender</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Phone</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPatients.map((patient, index) => (
+                <TableRow key={patient.patient_id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{patient.first_name} {patient.last_name}</TableCell>
+                  <TableCell>{calculateAge(patient.date_of_birth) ?? "N/A"}</TableCell>
+                  <TableCell>{patient.gender}</TableCell>
+                  <TableCell className="capitalize">{patient.status ?? "active"}</TableCell>
+                  <TableCell>{patient.phone_number}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
