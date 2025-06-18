@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.db.models import Q
 from .models import Patient
-from .serializers import PatientSerializer, PatientListSerializer
+from .serializers import PatientSerializer, PatientListSerializer 
+from django.shortcuts import redirect
 
 class PatientListCreateView(generics.ListCreateAPIView):
     queryset = Patient.objects.all()
@@ -40,4 +41,17 @@ def patient_stats(request):
         'total_patients': total_patients,
         'male_patients': male_patients,
         'female_patients': female_patients,
-    })
+    }) 
+    
+
+def login_success(request):
+    if request.user.role == 'doctor':
+        return redirect('doctor_dashboard')
+    elif request.user.role == 'nurse':
+        return redirect('nurse_dashboard')
+    elif request.user.role == 'admin':
+        return redirect('admin_dashboard')
+    elif request.user.role == 'patient':
+        return redirect('patient_dashboard')
+    else:
+        return redirect('home')
