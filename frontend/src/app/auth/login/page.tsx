@@ -48,7 +48,7 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
       // For demo purposes, simulate success
-      router.push('/dashboard')
+      router.push('/doctor')
     } catch (err) {
       setError('Invalid credentials. Please try again.')
     } finally {
