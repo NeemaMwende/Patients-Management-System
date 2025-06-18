@@ -11,6 +11,7 @@ const api = axios.create({
 
 
 export interface Patient {
+    status: string;
     patient_id: string;
   first_name: string;
   last_name: string;
