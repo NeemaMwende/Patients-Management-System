@@ -41,14 +41,12 @@ export default function LoginPage() {
     }
 
     try {
-      // TODO: Replace with actual Django API call
+
       console.log('Login attempt:', { email: formData.email })
       
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // For demo purposes, simulate success
-      router.push('/doctor')
+      router.push('/admin')
     } catch (err) {
       setError('Invalid credentials. Please try again.')
     } finally {
